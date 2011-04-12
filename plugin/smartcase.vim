@@ -69,7 +69,7 @@
 "              matter whether you say "hello world" or "HelloWorld" as long as
 "              words could be discerned.)
 "
-"                :%SmartCase "hello world"
+"                :%SmartCase hello world
 "
 "              This will do exactly the same as mentioned in usage 1.
 "
@@ -83,7 +83,7 @@
 "              This will replace any GoodDay into good_day, HelloWorld into
 "              hello_world, etc.
 
-command! -rang -nargs=+ SmartCase :<line1>,<line2>s//\=SmartCase(<args>)/g
+command! -rang -nargs=+ SmartCase :<line1>,<line2>s//\=SmartCase(<f-args>)/g
 
 " make a new string using the words from str_words and the lower/uppercase
 " styles from str_styles
