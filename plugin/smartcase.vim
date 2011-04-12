@@ -1,6 +1,9 @@
 " Script Name: smartcase.vim
 " Version:     1.0.2
 " Last Change: January 12, 2006
+" 				/^-- 13-Apr-2011 Enhanced :SmartCase command to take the same
+" 				arguments as :substitute, so that no previous search is
+" 				necessary, and the invocation is more intuitive. 
 " Author:      Yuheng Xie <elephant@linux.net.cn>
 "
 " Description: replacing words while keeping original lower/uppercase style
@@ -61,15 +64,12 @@
 "
 "              2. use SmartCase as command
 "
-"              First search for a string: (\c for ignoring case)
+"              (Note that a range is needed, and it doesn't matter whether you
+"              say "hello world" or "HelloWorld" as long as words could be
+"              discerned. Also, there's no need to use \c or pass the /i flag,
+"              the search will be case-insensitive automatically.)
 "
-"                /\cgoodday
-"
-"              Then use command: (note that a range is needed, and it doesn't
-"              matter whether you say "hello world" or "HelloWorld" as long as
-"              words could be discerned.)
-"
-"                :%SmartCase hello world
+"                :%SmartCase /goodday/hello world/g
 "
 "              This will do exactly the same as mentioned in usage 1.
 "
@@ -83,7 +83,19 @@
 "              This will replace any GoodDay into good_day, HelloWorld into
 "              hello_world, etc.
 
-command! -rang -nargs=+ SmartCase :<line1>,<line2>s//\=SmartCase(<f-args>)/g
+function! s:SmartCaseSubstitution( substitutionArgs )
+	let l:matches = matchlist(a:substitutionArgs, '\(\s*\(\A\).*\%(\%(^\|[^\\]\)\%(\\\\\)*\\\)\@<!\2\)\(.*\)\(\%(\%(^\|[^\\]\)\%(\\\\\)*\\\)\@<!\2\S*\)\(\s\+\S.*\)\?')
+	if empty(l:matches)
+		throw 'SmartCase: invalid substitute expression'
+	else
+		let [l:pattern, l:separator, l:replacement, l:flags, l:count] = l:matches[1:5]
+	endif
+
+	":<line1>,<line2>s//\=SmartCase(<f-args>)/g
+	return l:pattern . '\=SmartCase(' . string(l:replacement) . ')' . l:flags . (l:flags =~# 'i' ? '' : 'i') . l:count
+endfunction
+command! -range -nargs=+ SmartCaseDebug execute 'echomsg' string(<SID>SmartCaseSubstitution(<q-args>))
+command! -range -nargs=+ SmartCase execute '<line1>,<line2>substitute' <SID>SmartCaseSubstitution(<q-args>)
 
 " make a new string using the words from str_words and the lower/uppercase
 " styles from str_styles
