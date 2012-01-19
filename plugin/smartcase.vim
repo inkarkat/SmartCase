@@ -4,6 +4,7 @@
 " 				/^-- 13-Apr-2011 Enhanced :SmartCase command to take the same
 " 				arguments as :substitute, so that no previous search is
 " 				necessary, and the invocation is more intuitive. 
+" 				Added include and version guard, as this now requires Vim 7.0. 
 " Author:      Yuheng Xie <elephant@linux.net.cn>
 "
 " Description: replacing words while keeping original lower/uppercase style
@@ -73,6 +74,15 @@
 "
 "              This will do exactly the same as mentioned in usage 1.
 "
+"              If you want to re-use the previous search string, you can omit
+"              the full substitution argument and just pass the replacement: 
+"
+"                /\cgoodday
+"                :%SmartCase hello world
+"
+"              This will do a global substitution, without explicitly passing
+"              the /i flag, so the current case sensitivity applies. 
+"
 "              3. replacing lower/uppercases style, keeping original words
 "
 "              As an opposition to usage 1., this can be achieved by using
@@ -83,10 +93,16 @@
 "              This will replace any GoodDay into good_day, HelloWorld into
 "              hello_world, etc.
 
+" Avoid installing twice or when in unsupported Vim version. 
+if exists('g:loaded_smartcase') || (v:version < 700)
+	finish
+endif
+let g:loaded_smartcase = 1
+
 function! s:SmartCaseSubstitution( substitutionArgs )
 	let l:matches = matchlist(a:substitutionArgs, '\(\s*\(\A\).*\%(\%(^\|[^\\]\)\%(\\\\\)*\\\)\@<!\2\)\(.*\)\(\%(\%(^\|[^\\]\)\%(\\\\\)*\\\)\@<!\2\S*\)\(\s\+\S.*\)\?')
 	if empty(l:matches)
-		throw 'SmartCase: invalid substitute expression'
+		return '//\=SmartCase(' . string(escape(a:substitutionArgs, '/')) . ')/g'
 	else
 		let [l:pattern, l:separator, l:replacement, l:flags, l:count] = l:matches[1:5]
 	endif
