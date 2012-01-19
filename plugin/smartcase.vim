@@ -110,8 +110,8 @@ function! s:SmartCaseSubstitution( substitutionArgs )
 	":<line1>,<line2>s//\=SmartCase(<f-args>)/g
 	return l:pattern . '\=SmartCase(' . string(l:replacement) . ')' . l:flags . (l:flags =~# 'i' ? '' : 'i') . l:count
 endfunction
-command! -range -nargs=+ SmartCaseDebug execute 'echomsg' string(<SID>SmartCaseSubstitution(<q-args>))
 command! -range -nargs=+ SmartCase execute '<line1>,<line2>substitute' <SID>SmartCaseSubstitution(<q-args>)
+"****D command! -range -nargs=+ SmartCaseDebug execute 'echomsg' string(<SID>SmartCaseSubstitution(<q-args>))
 
 " make a new string using the words from str_words and the lower/uppercase
 " styles from str_styles
