@@ -2,11 +2,11 @@
 " Version:     1.0.2
 " Last Change: January 12, 2006
 " 				/^-- 20-Jan-2012 Allow use of backreferences &
-" 				and \0 .. \9 in str_words. 
+" 				and \0 .. \9 in str_words.
 " 				/^-- 13-Apr-2011 Enhanced :SmartCase command to take the same
 " 				arguments as :substitute, so that no previous search is
-" 				necessary, and the invocation is more intuitive. 
-" 				Added include and version guard, as this now requires Vim 7.0. 
+" 				necessary, and the invocation is more intuitive.
+" 				Added include and version guard, as this now requires Vim 7.0.
 " Author:      Yuheng Xie <elephant@linux.net.cn>
 "
 " Description: replacing words while keeping original lower/uppercase style
@@ -80,13 +80,13 @@
 "              This will do exactly the same as mentioned in usage 1.
 "
 "              If you want to re-use the previous search string, you can omit
-"              the full substitution argument and just pass the replacement: 
+"              the full substitution argument and just pass the replacement:
 "
 "                /\cgoodday
 "                :%SmartCase hello world
 "
 "              This will do a global substitution, without explicitly passing
-"              the /i flag, so the current case sensitivity applies. 
+"              the /i flag, so the current case sensitivity applies.
 "
 "              3. replacing lower/uppercases style, keeping original words
 "
@@ -98,25 +98,25 @@
 "              This will replace any GoodDay into good_day, HelloWorld into
 "              hello_world, etc.
 
-" Avoid installing twice or when in unsupported Vim version. 
+" Avoid installing twice or when in unsupported Vim version.
 if exists('g:loaded_smartcase') || (v:version < 700)
 	finish
 endif
 let g:loaded_smartcase = 1
 
 function! s:SmartCaseSubstitution( substitutionArgs )
-	let l:matches = matchlist(a:substitutionArgs, '\(\s*\(\A\).*\%(\%(^\|[^\\]\)\%(\\\\\)*\\\)\@<!\2\)\(.*\)\(\%(\%(^\|[^\\]\)\%(\\\\\)*\\\)\@<!\2\S*\)\(\s\+\S.*\)\?')
-	if empty(l:matches)
-		return '//\=SmartCase(' . string(escape(a:substitutionArgs, '/')) . ')/g'
-	else
-		let [l:pattern, l:separator, l:replacement, l:flags, l:count] = l:matches[1:5]
-	endif
+	let [l:separator, l:pattern, l:replacement, l:flags, l:count] =
+	\	ingo#cmdargs#substitute#Parse(a:substitutionArgs)
 
 	":<line1>,<line2>s//\=SmartCase(<f-args>)/g
-	return l:pattern . '\=SmartCase(' . string(l:replacement) . ')' . l:flags . (l:flags =~# 'i' ? '' : 'i') . l:count
+	return printf('%s%s%s\=SmartCase(%s)%s%s%s%s',
+	\	l:separator, l:pattern, l:separator,
+	\	string(l:replacement), l:separator,
+	\	l:flags, (l:flags =~# 'i' ? '' : 'i'), l:count
+	\)
 endfunction
-command! -range -nargs=+ SmartCase execute '<line1>,<line2>substitute' <SID>SmartCaseSubstitution(<q-args>)
-"****D command! -range -nargs=+ SmartCaseDebug execute 'echomsg' string(<SID>SmartCaseSubstitution(<q-args>))
+command! -range -nargs=? SmartCase execute '<line1>,<line2>substitute' <SID>SmartCaseSubstitution(<q-args>)
+command! -range -nargs=? SmartCaseDebug execute 'echomsg' string(<SID>SmartCaseSubstitution(<q-args>))
 
 function! s:ExpandReplacement( str )
 	let unescapedExpr = '\%(\%(^\|[^\\]\)\%(\\\\\)*\\\)\@<!'
@@ -131,6 +131,7 @@ function! s:ExpandReplacement( str )
 		" handle back references \0 .. \9
 		let str = substitute(str, unescapedExpr . '\\' . backref, submatch(backref), '')
 	endfor
+
 	return str
 endfunction
 " make a new string using the words from str_words and the lower/uppercase
