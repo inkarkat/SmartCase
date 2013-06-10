@@ -1,6 +1,8 @@
 " Script Name: smartcase.vim
 " Version:     1.0.2
 " Last Change: January 12, 2006
+" 				/^-- 20-Jan-2012 Allow use of backreferences &
+" 				and \0 .. \9 in str_words. 
 " 				/^-- 13-Apr-2011 Enhanced :SmartCase command to take the same
 " 				arguments as :substitute, so that no previous search is
 " 				necessary, and the invocation is more intuitive. 
@@ -28,7 +30,10 @@
 " Details:     SmartCase(str_words, str_styles = 0) make a new string using
 "              the words from str_words and the lower/uppercases styles from
 "              str_styles. If any of the arguments is a number n, it's
-"              equivalent to submatch(n). If str_styles is omitted, it's 0.
+"              equivalent to submatch(n). str_word can include the
+"              |sub-replace-special| strings & and \0 .. \9 that refer to the
+"              (whole or parts of the) matched pattern.
+"              If str_styles is omitted, it's 0.
 "
 "              SmartCase recognizes words in three case styles: 1: xxxx (all
 "              lowercases), 2: XXXX(all uppercases) and 3: Xxxx(one uppercase
@@ -113,6 +118,21 @@ endfunction
 command! -range -nargs=+ SmartCase execute '<line1>,<line2>substitute' <SID>SmartCaseSubstitution(<q-args>)
 "****D command! -range -nargs=+ SmartCaseDebug execute 'echomsg' string(<SID>SmartCaseSubstitution(<q-args>))
 
+function! s:ExpandReplacement( str )
+	let unescapedExpr = '\%(\%(^\|[^\\]\)\%(\\\\\)*\\\)\@<!'
+	let str = a:str
+
+	if a:str =~# l:unescapedExpr . (&magic ? '' : '\\') . '&'
+		" handle & for whole matched pattern
+		let str = substitute(str, unescapedExpr . (&magic ? '' : '\\') . '&', submatch(0), 'g')
+	endif
+
+	for backref in filter(map(split(a:str, unescapedExpr . '\\\d\zs'), 'strpart(v:val, strlen(v:val) - 1)'), 'v:val =~# "\\d"')
+		" handle back references \0 .. \9
+		let str = substitute(str, unescapedExpr . '\\' . backref, submatch(backref), '')
+	endfor
+	return str
+endfunction
 " make a new string using the words from str_words and the lower/uppercase
 " styles from str_styles
 function! SmartCase(...) " SmartCase(str_words, str_styles = 0)
@@ -123,12 +143,16 @@ function! SmartCase(...) " SmartCase(str_words, str_styles = 0)
 		let str_styles = submatch(0)
 		if matchstr(str_words, '\d\+') == str_words
 			let str_words = submatch(0 + str_words)
+		else
+			let str_words = s:ExpandReplacement(str_words)
 		endif
 	else
 		let str_words = a:1
 		let str_styles = a:2
 		if matchstr(str_words, '\d\+') == str_words
 			let str_words = submatch(0 + str_words)
+		else
+			let str_words = s:ExpandReplacement(str_words)
 		endif
 		if matchstr(str_styles, '\d\+') == str_styles
 			let str_styles = submatch(0 + str_styles)
