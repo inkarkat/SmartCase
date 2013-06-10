@@ -1,12 +1,18 @@
 " Script Name: smartcase.vim
-" Version:     1.0.2
-" Last Change: January 12, 2006
+" Version:     1.1.0
+" Dependencies:
+" 	- ingo/cmdargs/substitute.vim autoload script
+" 	- ingo/collections.vim autoload script
+" 	- ingo/regexp/previoussubstitution.vim autoload script
+"
+" Last Change: 11-Jun-2013
 " 				/^-- 11-Jun-2013 Delegate argument parsing to
 " 				ingo#cmdargs#substitute#Parse().
 " 				Avoid that the recall of a whole matched pattern & has
-" 				mistakenly any contained \N processed, too. Instead of
-" 				subsequent global substitutions, split the replacement around
-" 				the special atoms and s:DoExpand() them separately.
+" 				mistakenly any contained \N expanded, too. Instead of
+" 				multiple global substitutions, split the replacement around the
+" 				special atoms and s:DoExpand() them separately.
+" 				Allow to use the last substitution ~, too.
 "				Allow no passed arguments, and reuse the last search pattern and
 "				previous substitution.
 " 				/^-- 20-Jan-2012 Allow use of backreferences &
@@ -15,7 +21,8 @@
 " 				arguments as :substitute, so that no previous search is
 " 				necessary, and the invocation is more intuitive.
 " 				Added include and version guard, as this now requires Vim 7.0.
-" Author:      Yuheng Xie <elephant@linux.net.cn>
+" Original Author:	Yuheng Xie <elephant@linux.net.cn>
+" Maintainer:	Ingo Karkat <ingo@karkat.de>
 "
 " Description: replacing words while keeping original lower/uppercase style
 "
@@ -40,7 +47,8 @@
 "              str_styles. If any of the arguments is a number n, it's
 "              equivalent to submatch(n). str_word can include the
 "              |sub-replace-special| strings & and \0 .. \9 that refer to the
-"              (whole or parts of the) matched pattern.
+"              (whole or parts of the) matched pattern, and ~ as the string of
+"              the previous substitute |s~|.
 "              If str_styles is omitted, it's 0.
 "
 "              SmartCase recognizes words in three case styles: 1: xxxx (all
@@ -128,11 +136,13 @@ endfunction
 command! -range -nargs=? SmartCase execute '<line1>,<line2>substitute' <SID>SmartCaseSubstitution(<q-args>)
 command! -range -nargs=? SmartCaseDebug execute 'echomsg' string(<SID>SmartCaseSubstitution(<q-args>))
 
-function! s:DoExpand( wholeExpr, backrefExpr, str )
+function! s:DoExpand( wholeExpr, backrefExpr, lastExpr, str )
 	if a:str =~# '^' . a:wholeExpr . '$'
 		return submatch(0)
 	elseif a:str =~# '^' . a:backrefExpr . '$'
 		return submatch(a:str[-1:])
+	elseif a:str =~# '^' . a:lastExpr . '$'
+		return ingo#regexp#previoussubstitution#Get()
 	else
 		return a:str
 	endif
@@ -141,12 +151,13 @@ function! s:ExpandReplacement( str )
 	let unescapedExpr = '\%(\%(^\|[^\\]\)\%(\\\\\)*\\\)\@<!'
 	let wholeExpr = l:unescapedExpr . (&magic ? '' : '\\') . '&'
 	let backrefExpr = l:unescapedExpr . '\\\d'
-	let expandablesExpr = join([wholeExpr, backrefExpr], '\|')
+	let lastExpr = l:unescapedExpr . (&magic ? '' : '\\') . '\~'
+	let expandablesExpr = join([wholeExpr, backrefExpr, lastExpr], '\|')
 	return
 	\	join(
 	\		map(
 	\			ingo#collections#SplitKeepSeparators(a:str, expandablesExpr),
-	\			's:DoExpand(wholeExpr, backrefExpr, v:val)'
+	\			's:DoExpand(wholeExpr, backrefExpr, lastExpr, v:val)'
 	\		), ''
 	\	)
 endfunction
