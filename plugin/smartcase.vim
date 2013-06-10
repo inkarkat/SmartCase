@@ -15,6 +15,8 @@
 " 				Allow to use the last substitution ~, too.
 "				Allow no passed arguments, and reuse the last search pattern and
 "				previous substitution.
+"				ENH: Allow passing |sub-replace-special| \=... to
+"				SmartCase(...).
 " 				/^-- 20-Jan-2012 Allow use of backreferences &
 " 				and \0 .. \9 in str_words.
 " 				/^-- 13-Apr-2011 Enhanced :SmartCase command to take the same
@@ -169,20 +171,24 @@ function! SmartCase(...) " SmartCase(str_words, str_styles = 0)
 	elseif a:0 == 1
 		let str_words = a:1
 		let str_styles = submatch(0)
-		if matchstr(str_words, '\d\+') == str_words
+		if str_words =~# '^\d\+$'
 			let str_words = submatch(0 + str_words)
+		elseif str_words =~# '^\\='
+			let str_words = eval(str_words[2:])
 		else
 			let str_words = s:ExpandReplacement(str_words)
 		endif
 	else
 		let str_words = a:1
 		let str_styles = a:2
-		if matchstr(str_words, '\d\+') == str_words
+		if str_words =~# '^\d\+$'
 			let str_words = submatch(0 + str_words)
+		elseif str_words =~# '^\\='
+			let str_words = eval(str_words[2:])
 		else
 			let str_words = s:ExpandReplacement(str_words)
 		endif
-		if matchstr(str_styles, '\d\+') == str_styles
+		if str_styles =~# '^\d\+$'
 			let str_styles = submatch(0 + str_styles)
 		endif
 	endif
