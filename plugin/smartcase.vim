@@ -1,6 +1,14 @@
 " Script Name: smartcase.vim
 " Version:     1.0.2
 " Last Change: January 12, 2006
+" 				/^-- 11-Jun-2013 Delegate argument parsing to
+" 				ingo#cmdargs#substitute#Parse().
+" 				Avoid that the recall of a whole matched pattern & has
+" 				mistakenly any contained \N processed, too. Instead of
+" 				subsequent global substitutions, split the replacement around
+" 				the special atoms and s:DoExpand() them separately.
+"				Allow no passed arguments, and reuse the last search pattern and
+"				previous substitution.
 " 				/^-- 20-Jan-2012 Allow use of backreferences &
 " 				and \0 .. \9 in str_words.
 " 				/^-- 13-Apr-2011 Enhanced :SmartCase command to take the same
@@ -103,6 +111,8 @@ if exists('g:loaded_smartcase') || (v:version < 700)
 	finish
 endif
 let g:loaded_smartcase = 1
+let s:save_cpo = &cpo
+set cpo&vim
 
 function! s:SmartCaseSubstitution( substitutionArgs )
 	let [l:separator, l:pattern, l:replacement, l:flags, l:count] =
@@ -118,21 +128,27 @@ endfunction
 command! -range -nargs=? SmartCase execute '<line1>,<line2>substitute' <SID>SmartCaseSubstitution(<q-args>)
 command! -range -nargs=? SmartCaseDebug execute 'echomsg' string(<SID>SmartCaseSubstitution(<q-args>))
 
+function! s:DoExpand( wholeExpr, backrefExpr, str )
+	if a:str =~# '^' . a:wholeExpr . '$'
+		return submatch(0)
+	elseif a:str =~# '^' . a:backrefExpr . '$'
+		return submatch(a:str[-1:])
+	else
+		return a:str
+	endif
+endfunction
 function! s:ExpandReplacement( str )
 	let unescapedExpr = '\%(\%(^\|[^\\]\)\%(\\\\\)*\\\)\@<!'
-	let str = a:str
-
-	if a:str =~# l:unescapedExpr . (&magic ? '' : '\\') . '&'
-		" handle & for whole matched pattern
-		let str = substitute(str, unescapedExpr . (&magic ? '' : '\\') . '&', submatch(0), 'g')
-	endif
-
-	for backref in filter(map(split(a:str, unescapedExpr . '\\\d\zs'), 'strpart(v:val, strlen(v:val) - 1)'), 'v:val =~# "\\d"')
-		" handle back references \0 .. \9
-		let str = substitute(str, unescapedExpr . '\\' . backref, submatch(backref), '')
-	endfor
-
-	return str
+	let wholeExpr = l:unescapedExpr . (&magic ? '' : '\\') . '&'
+	let backrefExpr = l:unescapedExpr . '\\\d'
+	let expandablesExpr = join([wholeExpr, backrefExpr], '\|')
+	return
+	\	join(
+	\		map(
+	\			ingo#collections#SplitKeepSeparators(a:str, expandablesExpr),
+	\			's:DoExpand(wholeExpr, backrefExpr, v:val)'
+	\		), ''
+	\	)
 endfunction
 " make a new string using the words from str_words and the lower/uppercase
 " styles from str_styles
@@ -215,3 +231,6 @@ function! SmartCase(...) " SmartCase(str_words, str_styles = 0)
 
 	return result
 endfunction
+
+let &cpo = s:save_cpo
+unlet s:save_cpo
