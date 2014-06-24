@@ -5,7 +5,10 @@
 " 	- ingo/collections.vim autoload script
 " 	- ingo/regexp/previoussubstitution.vim autoload script
 "
-" Last Change: 11-Jun-2013
+" Last Change: 24-Jun-2014
+" 				/^-- 24-Jun-2014 ENH: When the match contains only a single
+" 				style element, but the replacement has multiple ones, derive a
+" 				repeating style from the match.
 " 				/^-- 11-Jun-2013 Delegate argument parsing to
 " 				ingo#cmdargs#substitute#Parse().
 " 				Avoid that the recall of a whole matched pattern & has
@@ -166,6 +169,8 @@ endfunction
 " make a new string using the words from str_words and the lower/uppercase
 " styles from str_styles
 function! SmartCase(...) " SmartCase(str_words, str_styles = 0)
+	let regexp = '\l\+\|\u\l\+\|\u\+\l\@!'
+
 	if a:0 == 0
 		return
 	elseif a:0 == 1
@@ -177,6 +182,30 @@ function! SmartCase(...) " SmartCase(str_words, str_styles = 0)
 			let str_words = eval(str_words[2:])
 		else
 			let str_words = s:ExpandReplacement(str_words)
+		endif
+
+		let single_element_regexp = '^\(\A*\)\(' . regexp . '\)\(\A*\)$'
+		if str_styles =~# single_element_regexp && str_words !~# single_element_regexp
+			" The match contains only a single style element, but the
+			" replacement has multiple ones. Derive a repeating style from the
+			" match.
+			let [prefix, word, suffix] = matchlist(str_styles, single_element_regexp)[1:3]
+			let separator = (
+			\	! empty(suffix) ?
+			\	suffix :
+			\		(! empty(prefix) ?
+			\			prefix :
+			\			''
+			\		)
+			\)
+
+			let duplicate_word = word
+			if empty(separator) && word !~# '\u'
+				" Create camelWord out of all-lowercase match.
+				let duplicate_word = substitute(word, '\a', '\u&', '')
+			endif
+
+			let str_styles = prefix . word . separator . duplicate_word . suffix
 		endif
 	else
 		let str_words = a:1
@@ -193,7 +222,6 @@ function! SmartCase(...) " SmartCase(str_words, str_styles = 0)
 		endif
 	endif
 
-	let regexp = '\l\+\|\u\l\+\|\u\+\l\@!'
 	let result = ""
 	let i = 0
 	let j = 0
