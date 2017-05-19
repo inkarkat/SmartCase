@@ -1,11 +1,14 @@
 " Script Name: smartcase.vim
-" Version:     1.1.0
+" Version:     1.1.1
 " Dependencies:
 " 	- ingo/cmdargs/substitute.vim autoload script
 " 	- ingo/collections.vim autoload script
 " 	- ingo/regexp/previoussubstitution.vim autoload script
 "
-" Last Change: 24-Jun-2014
+" Last Change: 19-May-2017
+" 				Yuheng Xie 19-May-2017 Merge original 1.0.3 version:
+" 				Trivial improvement: Treat numbers using last
+" 				style, and will not lose numbers when replacing.
 " 				/^-- 24-Jun-2014 ENH: When the match contains only a single
 " 				style element, but the replacement has multiple ones, derive a
 " 				repeating style from the match.
@@ -169,7 +172,7 @@ endfunction
 " make a new string using the words from str_words and the lower/uppercase
 " styles from str_styles
 function! SmartCase(...) " SmartCase(str_words, str_styles = 0)
-	let regexp = '\l\+\|\u\l\+\|\u\+\l\@!'
+	let regexp = '\l\+\|\u\l\+\|\u\+\l\@!\|\d\+'
 
 	if a:0 == 0
 		return
@@ -234,7 +237,9 @@ function! SmartCase(...) " SmartCase(str_words, str_styles = 0)
 				let e = matchend(str_styles, regexp, s)
 				let separator = strpart(str_styles, i, s - i)
 				let word = strpart(str_styles, s, e - s)
-				if word ==# tolower(word)
+				if word ==# tolower(word) && word ==# toupper(word)
+					let case = case  " all numbers
+				elseif word ==# tolower(word)
 					let case = 1  " all lowercases
 				elseif word ==# toupper(word)
 					let case = 2  " all uppercases
