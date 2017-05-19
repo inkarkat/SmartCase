@@ -29,7 +29,7 @@
 " 				arguments as :substitute, so that no previous search is
 " 				necessary, and the invocation is more intuitive.
 " 				Added include and version guard, as this now requires Vim 7.0.
-" Original Author:	Yuheng Xie <elephant@linux.net.cn>
+" Original Author:	Yuheng Xie <thinelephant@gmail.com>
 " Maintainer:	Ingo Karkat <ingo@karkat.de>
 "
 " Description: replacing words while keeping original lower/uppercase style
