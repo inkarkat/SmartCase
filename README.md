@@ -26,3 +26,7 @@ This can be done with the following command:
     :%s/\(\u\l\+\)\{2,}/\=SmartCase(0,"reference_style")/g
 
 To sum up: the first argument to SmartCase is the reference words, the second argument is the reference styles, if the second argument omitted, it's `submatch(0)`.
+
+### Installation
+
+- Requires the [ingo-library.vim plugin](http://www.vim.org/scripts/script.php?script_id=4433), version 1.021 or higher.
